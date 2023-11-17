@@ -1,0 +1,20 @@
+[package]
+name = "tuple_map"
+description = "Map individual elements of a tuple"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["tuple", "util", "tool"]
+repository = "https://github.com/thornleywalker/tuple_map/"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+tuple16 = []
+tuple32 = []
+tuple64 = []
+tuple128 = []
+
+[dependencies]
+paste = "1.0"
