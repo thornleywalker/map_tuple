@@ -16,7 +16,7 @@
 //! # Features
 //! Because rust doesn't allow reasoning about tuples generically, each tuple trait has to be
 //! implemented for each size of tuple explicitly. This crate provides 4 levels of tuple sizing
-//! (which includes all sizes of tuples below it; _only one feature can be enabled at a time_):
+//! (which includes all sizes of tuples below it):
 //! - 8 (default, no features enabled)
 //! - 16 (feature tuple16)
 //! - 32 (feature tuple32)
@@ -169,7 +169,6 @@ do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7);
 ))]
 do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #[cfg(all(
-    not(feature = "tuple16"),
     feature = "tuple32",
     not(feature = "tuple64"),
     not(feature = "tuple128"),
@@ -178,23 +177,13 @@ do_all_for_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31
 );
-#[cfg(all(
-    not(feature = "tuple16"),
-    not(feature = "tuple32"),
-    feature = "tuple64",
-    not(feature = "tuple128"),
-))]
+#[cfg(all(feature = "tuple64", not(feature = "tuple128"),))]
 do_all_for_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
     50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
 );
-#[cfg(all(
-    not(feature = "tuple16"),
-    not(feature = "tuple32"),
-    not(feature = "tuple64"),
-    feature = "tuple128",
-))]
+#[cfg(feature = "tuple128")]
 do_all_for_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
