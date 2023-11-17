@@ -1,22 +1,22 @@
-//! # Tuple Maps
+//! # Map Tuple
 //!
-//! This crate provides traits that allow mapping of individual tuple elements like so:
+//! This crate provides traits that allow `map()`ing of tuple elements of different types to other types like so:
 //! ```rust
-//! use tuple_map::*;
+//! use map_tuple::*;
 //!
-//! let tuple: (String, f32, i32, i32, bool) = (0i32, 1i32, 2i32, 3i32, 4i32)
-//!     .map3(|val| val * 5)
+//! let tuple = (0i32, 1.0f32, 2i32, true, 4i32)
+//!     .map3(|val| if val {3i64} else {0})
 //!     .map0(|val| val.to_string())
-//!     .map1(|val| val as f32)
+//!     .map1(|val| Some(val))
 //!     .map4(|val| val > 3);
 //!
-//! assert_eq!(tuple, ("0".to_string(), 1.0f32, 2i32, 15i32, true));
+//! assert_eq!(tuple, ("0".to_string(), Some(1.0f32), 2i32, 3i64, true));
 //! ```
 //!
 //! # Features
 //! Because rust doesn't allow reasoning about tuples generically, each tuple trait has to be
 //! implemented for each size of tuple explicitly. This crate provides 4 levels of tuple sizing
-//! (which includes all sizes of tuples below it; only one feature can be enabled at a time):
+//! (which includes all sizes of tuples below it; _only one feature can be enabled at a time_):
 //! - 8 (default, no features enabled)
 //! - 16 (feature tuple16)
 //! - 32 (feature tuple32)
