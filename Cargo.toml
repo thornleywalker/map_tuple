@@ -1,5 +1,5 @@
 [package]
-name = "tuple_map"
+name = "map_tuple"
 description = "Map individual elements of a tuple"
 version = "0.1.0"
 edition = "2021"
