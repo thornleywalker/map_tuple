@@ -50,13 +50,28 @@
 
 use paste::paste;
 
-macro_rules! tuple_trait {
-    ($trait_number:literal) => {
-        paste! {
-            pub trait [<TupleMap $trait_number >]<R, F> {
-                type Output;
+/// Copy-pasted from https://stackoverflow.com/a/42176533/13622927.
+/// This is a necessary hack to be able to iterate over macro arguments from last to first.
+macro_rules! apply_args_reverse {
+    ($macro_id:tt [] $($reversed:tt)*) => {
+        $macro_id!($($reversed) *);
+    };
+    ($macro_id:tt [$first:tt $($rest:tt)*] $($reversed:tt)*) => {
+        apply_args_reverse!($macro_id [$($rest)*] $first $($reversed)*);
+    };
+    // Entry point, use brackets to recursively reverse above.
+    ($macro_id:tt, $($t:tt)*) => {
+        apply_args_reverse!($macro_id [ $($t)* ]);
+    };
+}
 
-                fn [<map $trait_number >](self, f: F) -> Self::Output;
+/// Accept one or more numbers and generate the corresponding TupleMap trait(s).
+macro_rules! tuple_trait {
+    ($i:literal) => {
+        paste! {
+            pub trait [<TupleMap$i>]<R, F> {
+                type Output;
+                fn [<map$i>](self, f: F) -> Self::Output;
             }
         }
     };
@@ -65,92 +80,51 @@ macro_rules! tuple_trait {
     }
 }
 
-macro_rules! impl_trait {
-    ($($all:literal),*) => {
-        impl_trait!(s () $($all),*);
+/// Accept numbers (N N-1 ... 1 0), treat them as tuple sizes,
+/// and for each tuple size implement all possible MapTuple traits.
+macro_rules! impl_traits_for_tuples {
+    // Recurisively iterate tuple sizes from first (the largest) to last (the smallest).
+    ($max_size:literal $($smaller_sizes:literal)*) => {
+        apply_args_reverse!(impl_traits_for_tuple, $max_size $($smaller_sizes)*);
+        impl_traits_for_tuples!($($smaller_sizes)*);
     };
-    // shifting macro
-    (s ($($starter:literal),*) $curr:literal, $next:literal $(,$finisher:literal)*) => {
-        paste! {
-            /// Generics may not line up exactly with the index due to the way the macros are designed, but the size of the tuple is correct
-            impl<R, F, $([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
-            where
-                F: Fn([<T $curr>]) -> R,
-            {
-                type Output = ($([<T $starter>],)* R, [<T $next>], $([<T $finisher>]),*);
-                fn [<map $curr>](self, f: F) -> Self::Output {
-                    let ($([<self $starter>],)* [<self $curr>], [<self $next>], $([<self $finisher>]),* )= self;
-
-                    ($([<self $starter>],)* f([<self $curr>]), [<self $next>], $([<self $finisher>]),* )
-                }
-            }
-
-            impl_trait!(c ($($starter),*) $curr, $($finisher),*);
-
-            impl_trait!(s ($($starter,)* $curr) $next, $($finisher),*);
-        }
-    };
-    // shifting base case
-    (s ($($starter:literal),*) $curr:literal,) => {
-        paste! {
-            impl<R, F, $([<T $starter>],)* [<T $curr>]>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>],)
-            where
-                F: Fn([<T $curr>]) -> R,
-            {
-                type Output = ($([<T $starter>],)* R, );
-                fn [<map $curr>](self, f: F) -> Self::Output {
-                    let ($([<self $starter>],)* [<self $curr>], )= self;
-
-                    ($([<self $starter>],)* f([<self $curr>]),  )
-                }
-            }
-        }
-    };
-
-    // cutting macro
-    (c ($($starter:literal),*) $curr:literal, $next:literal $(,$finisher:literal)*) => {
-        paste! {
-            impl<R, F, $([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
-            where
-                F: Fn([<T $curr>]) -> R,
-            {
-                type Output = ($([<T $starter>],)* R, [<T $next>], $([<T $finisher>]),*);
-                fn [<map $curr>](self, f: F) -> Self::Output {
-                    let ($([<self $starter>],)* [<self $curr>], [<self $next>], $([<self $finisher>]),* )= self;
-
-                    ($([<self $starter>],)* f([<self $curr>]), [<self $next>], $([<self $finisher>]),* )
-                }
-            }
-
-            impl_trait!(c ($($starter),*) $curr, $($finisher),*);
-        }
-    };
-    // cutting base case
-    (c ($($starter:literal),*) $curr:literal,) => {
-        paste! {
-            impl<R, F, $([<T $starter>],)* [<T $curr>]>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>],)
-            where
-                F: Fn([<T $curr>]) -> R,
-            {
-                type Output = ($([<T $starter>],)* R, );
-                fn [<map $curr>](self, f: F) -> Self::Output {
-                    let ($([<self $starter>],)* [<self $curr>], )= self;
-
-                    ($([<self $starter>],)* f([<self $curr>]),  )
-                }
-            }
-        }
-    };
+    // Base case.
+    () => {}
 }
 
+/// Accept numbers (0 1 ... N-1 N) and implement all possible MapTuple traits for tuple of size N.
+macro_rules! impl_traits_for_tuple {
+    // "Public" case as advertized above.
+    ($zero:literal $($positive_nums:literal)*) => {
+        impl_traits_for_tuple!( | $zero $($positive_nums)*);
+    };
+    // "Private" case - recursively move forward through the arguments.
+    // The '|' determines the current position in the argument list.
+    ($($before:literal)* | $i:literal $($after:literal)*) => {
+        paste! {
+            impl<R, F, $([<T$before>],)* [<T$i>], $([<T$after>],)*>
+                [<TupleMap$i>]<R, F> for ($([<T$before>],)* [<T$i>], $([<T$after>],)*)
+            where
+                F: Fn([<T$i>]) -> R,
+            {
+                type Output = ($([<T$before>],)* R, $([<T$after>],)*);
+                fn [<map$i>](self, f: F) -> Self::Output {
+                    ($(self.$before,)* f(self.$i), $(self.$after,)*)
+                }
+            }
+        }
+        impl_traits_for_tuple!($($before)* $i | $($after)*);
+    };
+    // "Private" base case: we've iterated over the entire argument list.
+    ($($implemented:literal)+ | ) => {};
+}
+
+/// Accept numbers (0, 1, ..., N-1, N), define all corresponding MapTuple traits
+/// and implement them for all corresponding tuple sizes.
 macro_rules! do_all_for_trait {
     ($($all:literal),*) => {
         tuple_trait!($($all),*);
-        impl_trait!($($all),*);
+        apply_args_reverse!(impl_traits_for_tuples, $($all)*);
     };
 }
 
