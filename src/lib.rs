@@ -105,7 +105,7 @@ macro_rules! impl_traits_for_tuple {
             impl<R, F, $([<T$before>],)* [<T$i>], $([<T$after>],)*>
                 [<TupleMap$i>]<R, F> for ($([<T$before>],)* [<T$i>], $([<T$after>],)*)
             where
-                F: Fn([<T$i>]) -> R,
+                F: FnOnce([<T$i>]) -> R,
             {
                 type Output = ($([<T$before>],)* R, $([<T$after>],)*);
                 fn [<map$i>](self, f: F) -> Self::Output {
@@ -244,5 +244,32 @@ mod tests {
             .map89(|val| val.to_string())
             .map110(|val| val as u32)
             .map127(|val| val as f64 * 3.5);
+    }
+
+    #[test]
+    fn should_work_with_fn_once_closure() {
+        let iter = [1, 2, 3].into_iter();
+        // Closure captures `iter` by value and can only be called once.
+        assert_eq!(("foo", 4).map1(|n| iter.count() == n), ("foo", false));
+    }
+
+    #[test]
+    fn should_work_with_fn_mut_closure() {
+        let mut iter = [1, 2, 3].into_iter();
+        // Closure captures `iter` by mutable reference.
+        assert_eq!(("foo", 1).map1(|n| iter.next() == Some(n)), ("foo", true));
+        assert_eq!(iter.collect::<Vec<i32>>(), vec![2, 3]);
+    }
+
+    #[test]
+    fn should_work_with_fn_closure() {
+        let allowed = ["foo", "bar", "baz"];
+        // Closure captures `allowed` by immutable reference.
+        assert_eq!(("foo", 1).map0(|s| allowed.contains(&s)), (true, 1));
+    }
+
+    #[test]
+    fn should_work_with_fn_pointer() {
+        assert_eq!(("foo", 1).map1(i32::is_positive), ("foo", true));
     }
 }
