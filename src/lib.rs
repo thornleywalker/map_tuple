@@ -69,7 +69,7 @@ macro_rules! apply_args_reverse {
 macro_rules! tuple_trait {
     ($i:literal) => {
         paste! {
-            pub trait [<TupleMap$i>]<R, F> {
+            pub trait [<TupleMap$i>]<F> {
                 type Output;
                 fn [<map$i>](self, f: F) -> Self::Output;
             }
@@ -103,7 +103,7 @@ macro_rules! impl_traits_for_tuple {
     ($($before:literal)* | $i:literal $($after:literal)*) => {
         paste! {
             impl<R, F, $([<T$before>],)* [<T$i>], $([<T$after>],)*>
-                [<TupleMap$i>]<R, F> for ($([<T$before>],)* [<T$i>], $([<T$after>],)*)
+                [<TupleMap$i>]<F> for ($([<T$before>],)* [<T$i>], $([<T$after>],)*)
             where
                 F: Fn([<T$i>]) -> R,
             {
