@@ -12,9 +12,9 @@ repository = "https://github.com/thornleywalker/tuple_map/"
 
 [features]
 tuple16 = []
-tuple32 = []
-tuple64 = []
-tuple128 = []
+tuple32 = ["tuple16"]
+tuple64 = ["tuple32"]
+tuple128 = ["tuple64"]
 
 [dependencies]
 paste = "1.0"

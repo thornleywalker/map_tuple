@@ -154,25 +154,11 @@ macro_rules! do_all_for_trait {
     };
 }
 
-#[cfg(all(
-    not(feature = "tuple16"),
-    not(feature = "tuple32"),
-    not(feature = "tuple64"),
-    not(feature = "tuple128"),
-))]
+#[cfg(not(feature = "tuple16"))]
 do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7);
-#[cfg(all(
-    feature = "tuple16",
-    not(feature = "tuple32"),
-    not(feature = "tuple64"),
-    not(feature = "tuple128"),
-))]
+#[cfg(all(feature = "tuple16", not(feature = "tuple32"),))]
 do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-#[cfg(all(
-    feature = "tuple32",
-    not(feature = "tuple64"),
-    not(feature = "tuple128"),
-))]
+#[cfg(all(feature = "tuple32", not(feature = "tuple64"),))]
 do_all_for_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31
@@ -205,12 +191,7 @@ mod tests {
             .map2(|val| val as f64 * 3.5);
     }
 
-    #[cfg(any(
-        feature = "tuple16",
-        feature = "tuple32",
-        feature = "tuple64",
-        feature = "tuple128"
-    ))]
+    #[cfg(feature = "tuple16")]
     #[test]
     fn tuples_to_16() {
         let _tuple = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
@@ -222,7 +203,7 @@ mod tests {
             .map0(|val| val as f64 * 3.5);
     }
 
-    #[cfg(any(feature = "tuple32", feature = "tuple64", feature = "tuple128"))]
+    #[cfg(feature = "tuple32")]
     #[test]
     fn tuples_to_32() {
         let _tuple = (
@@ -240,7 +221,7 @@ mod tests {
             .map31(|val| val as f64 * 3.5);
     }
 
-    #[cfg(any(feature = "tuple64", feature = "tuple128"))]
+    #[cfg(feature = "tuple64")]
     #[test]
     fn tuples_to_64() {
         let _tuple = (
