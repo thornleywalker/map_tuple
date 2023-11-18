@@ -2,13 +2,13 @@
 //!
 //! This crate provides traits that allow `map()`ing of tuple elements of different types to other types like so:
 //! ```rust
-//! use map_tuple::*;
+//! use map_tuple::TupleMap;
 //!
 //! let tuple = (0i32, 1.0f32, 2i32, true, 4i32)
-//!     .map3(|val| if val {3i64} else {0})
-//!     .map0(|val| val.to_string())
-//!     .map1(|val| Some(val))
-//!     .map4(|val| val > 3);
+//!     .mapt::<3>(|val| if val {3i64} else {0})
+//!     .mapt::<0>(|val| val.to_string())
+//!     .mapt::<1>(|val| Some(val))
+//!     .mapt::<4>(|val| val > 3);
 //!
 //! assert_eq!(tuple, ("0".to_string(), Some(1.0f32), 2i32, 3i64, true));
 //! ```
@@ -50,18 +50,30 @@
 
 use paste::paste;
 
-macro_rules! tuple_trait {
-    ($trait_number:literal) => {
-        paste! {
-            pub trait [<TupleMap $trait_number >]<R, F> {
-                type Output;
+pub trait InternalTupleMap<const INDEX: usize, R, F> {
+    type Output;
 
-                fn [<map $trait_number >](self, f: F) -> Self::Output;
-            }
-        }
-    };
-    ($($trait_number:literal),*) => {
-        $(tuple_trait!($trait_number);)*
+    fn internal_map_tuple(self, f: F) -> Self::Output;
+}
+
+pub trait TupleMap<R, F> {
+    type Output<const INDEX: usize>
+    where
+        Self: InternalTupleMap<INDEX, R, F>;
+
+    fn mapt<const INDEX: usize>(self, f: F) -> <Self as TupleMap<R, F>>::Output<INDEX>
+    where
+        Self: InternalTupleMap<INDEX, R, F>;
+}
+
+impl<T, R, F> TupleMap<R, F> for T {
+    type Output<const INDEX: usize> = <T as InternalTupleMap::<INDEX, R, F>>::Output where T: InternalTupleMap::<INDEX, R, F>;
+
+    fn mapt<const INDEX: usize>(self, f: F) -> Self::Output<INDEX>
+    where
+        T: InternalTupleMap<INDEX, R, F>,
+    {
+        <T as InternalTupleMap<INDEX, R, F>>::internal_map_tuple(self, f)
     }
 }
 
@@ -74,12 +86,12 @@ macro_rules! impl_trait {
         paste! {
             /// Generics may not line up exactly with the index due to the way the macros are designed, but the size of the tuple is correct
             impl<R, F, $([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
+                InternalTupleMap<$curr, R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
             where
                 F: Fn([<T $curr>]) -> R,
             {
                 type Output = ($([<T $starter>],)* R, [<T $next>], $([<T $finisher>]),*);
-                fn [<map $curr>](self, f: F) -> Self::Output {
+                fn internal_map_tuple(self, f: F) -> Self::Output {
                     let ($([<self $starter>],)* [<self $curr>], [<self $next>], $([<self $finisher>]),* )= self;
 
                     ($([<self $starter>],)* f([<self $curr>]), [<self $next>], $([<self $finisher>]),* )
@@ -95,12 +107,12 @@ macro_rules! impl_trait {
     (s ($($starter:literal),*) $curr:literal,) => {
         paste! {
             impl<R, F, $([<T $starter>],)* [<T $curr>]>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>],)
+                InternalTupleMap<$curr, R, F> for ($([<T $starter>],)* [<T $curr>],)
             where
                 F: Fn([<T $curr>]) -> R,
             {
                 type Output = ($([<T $starter>],)* R, );
-                fn [<map $curr>](self, f: F) -> Self::Output {
+                fn internal_map_tuple(self, f: F) -> Self::Output {
                     let ($([<self $starter>],)* [<self $curr>], )= self;
 
                     ($([<self $starter>],)* f([<self $curr>]),  )
@@ -113,12 +125,12 @@ macro_rules! impl_trait {
     (c ($($starter:literal),*) $curr:literal, $next:literal $(,$finisher:literal)*) => {
         paste! {
             impl<R, F, $([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
+                InternalTupleMap<$curr, R, F> for ($([<T $starter>],)* [<T $curr>], [<T $next>], $([<T $finisher>]),*)
             where
                 F: Fn([<T $curr>]) -> R,
             {
                 type Output = ($([<T $starter>],)* R, [<T $next>], $([<T $finisher>]),*);
-                fn [<map $curr>](self, f: F) -> Self::Output {
+                fn internal_map_tuple(self, f: F) -> Self::Output {
                     let ($([<self $starter>],)* [<self $curr>], [<self $next>], $([<self $finisher>]),* )= self;
 
                     ($([<self $starter>],)* f([<self $curr>]), [<self $next>], $([<self $finisher>]),* )
@@ -132,12 +144,12 @@ macro_rules! impl_trait {
     (c ($($starter:literal),*) $curr:literal,) => {
         paste! {
             impl<R, F, $([<T $starter>],)* [<T $curr>]>
-                [<TupleMap $curr>]<R, F> for ($([<T $starter>],)* [<T $curr>],)
+                InternalTupleMap<$curr, R, F> for ($([<T $starter>],)* [<T $curr>],)
             where
                 F: Fn([<T $curr>]) -> R,
             {
                 type Output = ($([<T $starter>],)* R, );
-                fn [<map $curr>](self, f: F) -> Self::Output {
+                fn internal_map_tuple(self, f: F) -> Self::Output {
                     let ($([<self $starter>],)* [<self $curr>], )= self;
 
                     ($([<self $starter>],)* f([<self $curr>]),  )
@@ -147,44 +159,37 @@ macro_rules! impl_trait {
     };
 }
 
-macro_rules! do_all_for_trait {
-    ($($all:literal),*) => {
-        tuple_trait!($($all),*);
-        impl_trait!($($all),*);
-    };
-}
-
 #[cfg(all(
     not(feature = "tuple16"),
     not(feature = "tuple32"),
     not(feature = "tuple64"),
     not(feature = "tuple128"),
 ))]
-do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7);
+impl_trait!(0, 1, 2, 3, 4, 5, 6, 7);
 #[cfg(all(
     feature = "tuple16",
     not(feature = "tuple32"),
     not(feature = "tuple64"),
     not(feature = "tuple128"),
 ))]
-do_all_for_trait!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+impl_trait!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #[cfg(all(
     feature = "tuple32",
     not(feature = "tuple64"),
     not(feature = "tuple128"),
 ))]
-do_all_for_trait!(
+impl_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31
 );
 #[cfg(all(feature = "tuple64", not(feature = "tuple128"),))]
-do_all_for_trait!(
+impl_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
     50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
 );
 #[cfg(feature = "tuple128")]
-do_all_for_trait!(
+impl_trait!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
     50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
@@ -200,9 +205,9 @@ mod tests {
     #[test]
     fn tuples_to_8() {
         let _tuple = (0, 1, 2, 3, 4, 5, 6, 7)
-            .map7(|val| val.to_string())
-            .map3(|val| val as u32)
-            .map2(|val| val as f64 * 3.5);
+            .mapt::<7>(|val| val.to_string())
+            .mapt::<3>(|val| val as u32)
+            .mapt::<2>(|val| val as f64 * 3.5);
     }
 
     #[cfg(any(
@@ -214,12 +219,12 @@ mod tests {
     #[test]
     fn tuples_to_16() {
         let _tuple = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-            .map7(|val| val.to_string())
-            .map3(|val| val as u32)
-            .map2(|val| val as f64 * 3.5)
-            .map8(|val| val.to_string())
-            .map15(|val| val as u32)
-            .map0(|val| val as f64 * 3.5);
+            .mapt::<7>(|val| val.to_string())
+            .mapt::<3>(|val| val as u32)
+            .mapt::<2>(|val| val as f64 * 3.5)
+            .mapt::<8>(|val| val.to_string())
+            .mapt::<15>(|val| val as u32)
+            .mapt::<0>(|val| val as f64 * 3.5);
     }
 
     #[cfg(any(feature = "tuple32", feature = "tuple64", feature = "tuple128"))]
@@ -229,15 +234,15 @@ mod tests {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
             24, 25, 26, 27, 28, 29, 30, 31,
         )
-            .map7(|val| val.to_string())
-            .map3(|val| val as u32)
-            .map2(|val| val as f64 * 3.5)
-            .map8(|val| val.to_string())
-            .map15(|val| val as u32)
-            .map0(|val| val as f64 * 3.5)
-            .map16(|val| val.to_string())
-            .map29(|val| val as u32)
-            .map31(|val| val as f64 * 3.5);
+            .mapt::<7>(|val| val.to_string())
+            .mapt::<3>(|val| val as u32)
+            .mapt::<2>(|val| val as f64 * 3.5)
+            .mapt::<8>(|val| val.to_string())
+            .mapt::<15>(|val| val as u32)
+            .mapt::<0>(|val| val as f64 * 3.5)
+            .mapt::<16>(|val| val.to_string())
+            .mapt::<29>(|val| val as u32)
+            .mapt::<31>(|val| val as f64 * 3.5);
     }
 
     #[cfg(any(feature = "tuple64", feature = "tuple128"))]
@@ -248,18 +253,18 @@ mod tests {
             24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
             46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
         )
-            .map7(|val| val.to_string())
-            .map3(|val| val as u32)
-            .map2(|val| val as f64 * 3.5)
-            .map8(|val| val.to_string())
-            .map15(|val| val as u32)
-            .map0(|val| val as f64 * 3.5)
-            .map16(|val| val.to_string())
-            .map29(|val| val as u32)
-            .map31(|val| val as f64 * 3.5)
-            .map32(|val| val.to_string())
-            .map45(|val| val as u32)
-            .map63(|val| val as f64 * 3.5);
+            .mapt::<7>(|val| val.to_string())
+            .mapt::<3>(|val| val as u32)
+            .mapt::<2>(|val| val as f64 * 3.5)
+            .mapt::<8>(|val| val.to_string())
+            .mapt::<15>(|val| val as u32)
+            .mapt::<0>(|val| val as f64 * 3.5)
+            .mapt::<16>(|val| val.to_string())
+            .mapt::<29>(|val| val as u32)
+            .mapt::<31>(|val| val as f64 * 3.5)
+            .mapt::<32>(|val| val.to_string())
+            .mapt::<45>(|val| val as u32)
+            .mapt::<63>(|val| val as f64 * 3.5);
     }
 
     #[cfg(feature = "tuple128")]
@@ -274,20 +279,20 @@ mod tests {
             109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125,
             126, 127,
         )
-            .map7(|val| val.to_string())
-            .map3(|val| val as u32)
-            .map2(|val| val as f64 * 3.5)
-            .map8(|val| val.to_string())
-            .map15(|val| val as u32)
-            .map0(|val| val as f64 * 3.5)
-            .map16(|val| val.to_string())
-            .map29(|val| val as u32)
-            .map31(|val| val as f64 * 3.5)
-            .map32(|val| val.to_string())
-            .map45(|val| val as u32)
-            .map63(|val| val as f64 * 3.5)
-            .map89(|val| val.to_string())
-            .map110(|val| val as u32)
-            .map127(|val| val as f64 * 3.5);
+            .mapt::<7>(|val| val.to_string())
+            .mapt::<3>(|val| val as u32)
+            .mapt::<2>(|val| val as f64 * 3.5)
+            .mapt::<8>(|val| val.to_string())
+            .mapt::<15>(|val| val as u32)
+            .mapt::<0>(|val| val as f64 * 3.5)
+            .mapt::<16>(|val| val.to_string())
+            .mapt::<29>(|val| val as u32)
+            .mapt::<31>(|val| val as f64 * 3.5)
+            .mapt::<32>(|val| val.to_string())
+            .mapt::<45>(|val| val as u32)
+            .mapt::<63>(|val| val as f64 * 3.5)
+            .mapt::<89>(|val| val.to_string())
+            .mapt::<110>(|val| val as u32)
+            .mapt::<127>(|val| val as f64 * 3.5);
     }
 }
