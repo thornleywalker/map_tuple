@@ -32,13 +32,13 @@
 //! compiling rust generics tends to take a long time in and of itself, so every addition of
 //! another size of tuple increases compilation time exponentially.
 //!
-//! For example, on an M1 Mac, the following are the debug compilation times for the various
+//! For example, on an i5-8400, the following are the debug compilation times for the various
 //! features/tuple sizes:
 //! - no features (8) => 0.09s
-//! - tuple16 => 0.23s
-//! - tuple32 => 1.27s
-//! - tuple64 => 9.37s
-//! - tuple128 => 84s
+//! - tuple16 => 0.24s
+//! - tuple32 => 1.26s
+//! - tuple64 => 9.21s
+//! - tuple128 => 76s
 //!
 //! If, for some unholy reason, you happen to need tuples larger than 128, I highly recommend you
 //! reconsider and try to use a struct, vec, enum, or some combination of those. However, if you
