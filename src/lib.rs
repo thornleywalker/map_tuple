@@ -13,6 +13,9 @@
 //! assert_eq!(tuple, ("0".to_string(), Some(1.0f32), 2i32, 3i64, true));
 //! ```
 //!
+//! If you want to `map()` entire tuples of the same type like `(T, T, T)`,
+//! use [tuple_map](https://crates.io/crates/tuple_map).
+//!
 //! # Features
 //! Because rust doesn't allow reasoning about tuples generically, each tuple trait has to be
 //! implemented for each size of tuple explicitly. This crate provides 4 levels of tuple sizing
