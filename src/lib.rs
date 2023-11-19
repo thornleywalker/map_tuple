@@ -4,6 +4,11 @@
 //! ```rust
 //! use map_tuple::*;
 //!
+//! assert_eq!(("foo", 42).map0(str::len), (3, 42));
+//! assert_eq!(("foo", 42).map1(i32::is_positive), ("foo", true));
+//!
+//! assert_eq!((1, 2, "fizz", 4).map2(|_| 3), (1, 2, 3, 4));
+//!
 //! let tuple = (0i32, 1.0f32, 2i32, true, 4i32)
 //!     .map3(|val| if val {3i64} else {0})
 //!     .map0(|val| val.to_string())
