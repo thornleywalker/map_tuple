@@ -172,21 +172,36 @@ do_all_for_trait!(
 ///
 /// After the target tuple, one or more arguments in form of `(i1, i2, ...) => f` may be given.
 ///
+/// The elements don't have to have the same type. The function expression is copy-pasted for each
+/// element, and that expression can be a trait method or a duck-typed lambda.
+///
 /// ## Examples
 ///
 /// ```rust
 /// use map_tuple::*;
 ///
+/// // Elements have the same type.
 /// let tuple = ('A', Some('B'), 'c', 'd');
 /// assert_eq!(
 ///     map_elems!(tuple, (2, 3) => |c| c.to_ascii_uppercase(), (0, 2, 3) => Some),
 ///     (Some('A'), Some('B'), Some('C'), Some('D'))
 /// );
 ///
-/// let tuple = (1, 2, 3_i64);
+/// // Elements implement the same trait.
+/// let tuple = (1_i16, 2_i32, 3_i64);
 /// assert_eq!(
 ///     map_elems!(tuple, (0, 1) => i64::from),
 ///     (1_i64, 2_i64, 3_i64)
+/// );
+///
+/// // Duck-typed lambda that happens to work with all chosen elements.
+/// // Note that no common traits (like hypothetical Len) are used
+/// // and that the lambda doesn't have to accept every type either
+/// // (applying it to the last element would not compile).
+/// let tuple = ("foo", [1, 2], 1);
+/// assert_eq!(
+///     map_elems!(tuple, (0, 1) => |e| e.len()),
+///     (3, 2, 1)
 /// );
 /// ```
 #[macro_export]
