@@ -18,6 +18,18 @@
 //! assert_eq!(tuple, ("0".to_string(), Some(1.0f32), 2i32, 3i64, true));
 //! ```
 //!
+//! There's also a shortcut macro for applying the same function(s) to multiple elements:
+//!
+//! ```rust
+//! use map_tuple::*;
+//!
+//! let tuple = ('A', Some('B'), 'c', 'd');
+//! assert_eq!(
+//!     map_elems!(tuple, (2, 3) => |c| c.to_ascii_uppercase(), (0, 2, 3) => Some),
+//!     (Some('A'), Some('B'), Some('C'), Some('D'))
+//! );
+//! ```
+//!
 //! If you want to `map()` entire tuples of the same type like `(T, T, T)`,
 //! use [tuple_map](https://crates.io/crates/tuple_map).
 //!
@@ -55,6 +67,9 @@
 
 // We really abuse the macros around here
 #![recursion_limit = "512"]
+
+// Without this, `map_elems!` doesn't compile when used from outside of the crate.
+pub extern crate paste;
 
 use paste::paste;
 
@@ -160,6 +175,56 @@ do_all_for_trait!(
     98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
     117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127
 );
+
+/// Apply the same function(s) to multiple elements.
+///
+/// After the target tuple, one or more arguments in form of `(i1, i2, ...) => f` may be given.
+///
+/// The elements don't have to have the same type. The function expression is copy-pasted for each
+/// element, and that expression can be a trait method or a duck-typed lambda.
+///
+/// ## Examples
+///
+/// ```rust
+/// use map_tuple::*;
+///
+/// // Elements have the same type.
+/// let tuple = ('A', Some('B'), 'c', 'd');
+/// assert_eq!(
+///     map_elems!(tuple, (2, 3) => |c| c.to_ascii_uppercase(), (0, 2, 3) => Some),
+///     (Some('A'), Some('B'), Some('C'), Some('D'))
+/// );
+///
+/// // Elements implement the same trait.
+/// let tuple = (1_i16, 2_i32, 3_i64);
+/// assert_eq!(
+///     map_elems!(tuple, (0, 1) => i64::from),
+///     (1_i64, 2_i64, 3_i64)
+/// );
+///
+/// // Duck-typed lambda that happens to work with all chosen elements.
+/// // Note that no common traits (like hypothetical Len) are used
+/// // and that the lambda doesn't have to accept every type either
+/// // (applying it to the last element would not compile).
+/// let tuple = ("foo", [1, 2], 1);
+/// assert_eq!(
+///     map_elems!(tuple, (0, 1) => |e| e.len()),
+///     (3, 2, 1)
+/// );
+/// ```
+#[macro_export]
+macro_rules! map_elems {
+    ($tuple:expr $(,($($i:literal),+) => $f:expr)+) => {
+        $crate::paste::paste!{
+            $tuple
+                $(
+                    $(
+                        .[<map$i>]($f)
+                    )+
+                )+
+        }
+    };
+}
 
 #[cfg(test)]
 mod tests {
