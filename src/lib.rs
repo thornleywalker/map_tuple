@@ -63,6 +63,9 @@
 // We really abuse the macros around here
 #![recursion_limit = "512"]
 
+// Without this, `map_elems!` doesn't compile when used from outside of the crate.
+pub extern crate paste;
+
 use paste::paste;
 
 /// Copy-pasted from https://stackoverflow.com/a/42176533/13622927.
@@ -207,7 +210,7 @@ do_all_for_trait!(
 #[macro_export]
 macro_rules! map_elems {
     ($tuple:expr $(,($($i:literal),+) => $f:expr)+) => {
-        paste::paste!{
+        $crate::paste::paste!{
             $tuple
                 $(
                     $(
